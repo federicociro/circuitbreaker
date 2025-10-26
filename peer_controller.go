@@ -324,7 +324,8 @@ func (p *peerController) run(ctx context.Context) error {
 
 			// Queue if in one of the queue modes.
 			if mode == ModeQueue ||
-				(mode == ModeQueuePeerInitiated && event.peerInitiated) {
+				(mode == ModeQueuePeerInitiated && event.peerInitiated) ||
+				(mode == ModeQueueLimited && (p.cfg.MaxQueueSize == 0 || int64(queue.Len()) < p.cfg.MaxQueueSize)) {
 
 				queue.PushFront(event)
 

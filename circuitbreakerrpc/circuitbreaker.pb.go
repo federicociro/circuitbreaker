@@ -28,6 +28,7 @@ const (
 	Mode_MODE_QUEUE                Mode = 1
 	Mode_MODE_QUEUE_PEER_INITIATED Mode = 2
 	Mode_MODE_BLOCK                Mode = 3
+	Mode_MODE_QUEUE_LIMITED        Mode = 4
 )
 
 // Enum value maps for Mode.
@@ -37,12 +38,14 @@ var (
 		1: "MODE_QUEUE",
 		2: "MODE_QUEUE_PEER_INITIATED",
 		3: "MODE_BLOCK",
+		4: "MODE_QUEUE_LIMITED",
 	}
 	Mode_value = map[string]int32{
 		"MODE_FAIL":                 0,
 		"MODE_QUEUE":                1,
 		"MODE_QUEUE_PEER_INITIATED": 2,
 		"MODE_BLOCK":                3,
+		"MODE_QUEUE_LIMITED":        4,
 	}
 )
 
@@ -634,6 +637,7 @@ type Limit struct {
 	MaxHourlyRate int64 `protobuf:"varint,3,opt,name=max_hourly_rate,json=maxHourlyRate,proto3" json:"max_hourly_rate,omitempty"`
 	MaxPending    int64 `protobuf:"varint,5,opt,name=max_pending,json=maxPending,proto3" json:"max_pending,omitempty"`
 	Mode          Mode  `protobuf:"varint,6,opt,name=mode,proto3,enum=circuitbreaker.Mode" json:"mode,omitempty"`
+	MaxQueueSize  int64 `protobuf:"varint,7,opt,name=max_queue_size,json=maxQueueSize,proto3" json:"max_queue_size,omitempty"`
 }
 
 func (x *Limit) Reset() {
@@ -687,6 +691,13 @@ func (x *Limit) GetMode() Mode {
 		return x.Mode
 	}
 	return Mode_MODE_FAIL
+}
+
+func (x *Limit) GetMaxQueueSize() int64 {
+	if x != nil {
+		return x.MaxQueueSize
+	}
+	return 0
 }
 
 type Counter struct {

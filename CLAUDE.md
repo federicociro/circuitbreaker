@@ -94,9 +94,10 @@ The `.proto` file defines the gRPC API. Generated files (`*.pb.go`, `*.pb.gw.go`
 
 Configured per-peer (with default fallback):
 - `FAIL` - Immediately fail HTLCs exceeding limits
-- `QUEUE` - Queue HTLCs until slots available and rate limit allows
+- `QUEUE` - Queue HTLCs until slots available and rate limit allows (unlimited queue)
 - `QUEUE_PEER_INITIATED` - Queue only for peer-opened channels, fail for own channels
 - `BLOCK` - Block all HTLCs from peer
+- `QUEUE_LIMITED` - Queue HTLCs up to `max_queue_size` limit, then fail for safety (hybrid mode)
 
 ### Frontend Integration
 
@@ -109,7 +110,11 @@ The web UI is a Next.js static export embedded in the Go binary at compile time:
 ### Database Schema
 
 SQLite database with migrations managed by `rubenv/sql-migrate`:
-- `limits` table - Per-peer configuration (max pending, rate limits, mode)
+- `limits` table - Per-peer configuration (max pending, rate limits, mode, max queue size)
+  - `max_pending` - Maximum number of in-flight HTLCs
+  - `max_hourly_rate` - Maximum HTLCs per hour (rate limiting)
+  - `mode` - Operating mode (FAIL, QUEUE, QUEUE_PEER_INITIATED, BLOCK, QUEUE_LIMITED)
+  - `max_queue_size` - Maximum queue size for QUEUE_LIMITED mode (0 = unlimited)
 - `htlc_info` table - HTLC forwarding history for monitoring
 - Default peer (`000...000`) stores global defaults
 

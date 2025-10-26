@@ -7,6 +7,7 @@ const (
 	ModeQueue
 	ModeQueuePeerInitiated
 	ModeBlock
+	ModeQueueLimited
 )
 
 func (m Mode) String() string {
@@ -22,6 +23,9 @@ func (m Mode) String() string {
 
 	case ModeBlock:
 		return "BLOCK"
+
+	case ModeQueueLimited:
+		return "QUEUE_LIMITED"
 
 	default:
 		panic("unknown mode")

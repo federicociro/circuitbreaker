@@ -81,6 +81,7 @@ func unmarshalLimit(rpcLimit *circuitbreakerrpc.Limit) (Limit, error) {
 	limit := Limit{
 		MaxHourlyRate: rpcLimit.MaxHourlyRate,
 		MaxPending:    rpcLimit.MaxPending,
+		MaxQueueSize:  rpcLimit.MaxQueueSize,
 	}
 
 	switch rpcLimit.Mode {
@@ -95,6 +96,9 @@ func unmarshalLimit(rpcLimit *circuitbreakerrpc.Limit) (Limit, error) {
 
 	case circuitbreakerrpc.Mode_MODE_BLOCK:
 		limit.Mode = ModeBlock
+
+	case circuitbreakerrpc.Mode_MODE_QUEUE_LIMITED:
+		limit.Mode = ModeQueueLimited
 
 	default:
 		return Limit{}, errors.New("unknown mode")
@@ -204,6 +208,7 @@ func marshalLimit(limit Limit) (*circuitbreakerrpc.Limit, error) {
 	rpcLimit := &circuitbreakerrpc.Limit{
 		MaxHourlyRate: limit.MaxHourlyRate,
 		MaxPending:    limit.MaxPending,
+		MaxQueueSize:  limit.MaxQueueSize,
 	}
 
 	switch limit.Mode {
@@ -218,6 +223,9 @@ func marshalLimit(limit Limit) (*circuitbreakerrpc.Limit, error) {
 
 	case ModeBlock:
 		rpcLimit.Mode = circuitbreakerrpc.Mode_MODE_BLOCK
+
+	case ModeQueueLimited:
+		rpcLimit.Mode = circuitbreakerrpc.Mode_MODE_QUEUE_LIMITED
 
 	default:
 		return nil, errors.New("unknown mode")

@@ -67,11 +67,32 @@ var migrations = &migrate.MemoryMigrationSource{
                                         outgoing_peer TEXT NOT NULL,
                                         outgoing_channel INTEGER NOT NULL,
                                         outgoing_htlc_index INTEGER NOT NULL,
-                                        
+
                                         CONSTRAINT unique_incoming_circuit UNIQUE (incoming_channel, incoming_htlc_index),
                                         CONSTRAINT unique_outgoing_circuit UNIQUE (outgoing_channel, outgoing_htlc_index)
                                 );`,
 				`CREATE INDEX add_time_index ON forwarding_history (add_time);`,
+			},
+		},
+		{
+			Id: "4",
+			Up: []string{
+				`
+				ALTER TABLE limits RENAME TO limits_old;
+
+				CREATE TABLE IF NOT EXISTS limits (
+					peer TEXT PRIMARY KEY NOT NULL,
+					htlc_max_pending INTEGER NOT NULL,
+					htlc_max_hourly_rate INTEGER NOT NULL,
+					mode TEXT CHECK(mode IN ('FAIL', 'QUEUE', 'QUEUE_PEER_INITIATED', 'BLOCK', 'QUEUE_LIMITED')) NOT NULL DEFAULT 'FAIL',
+					max_queue_size INTEGER NOT NULL DEFAULT 0
+				);
+
+				INSERT INTO limits(peer, htlc_max_pending, htlc_max_hourly_rate, mode, max_queue_size)
+					SELECT peer, htlc_max_pending, htlc_max_hourly_rate, mode, 0 FROM limits_old;
+
+				DROP TABLE limits_old;
+				`,
 			},
 		},
 	},
@@ -136,6 +157,7 @@ type Limit struct {
 	MaxHourlyRate int64
 	MaxPending    int64
 	Mode          Mode
+	MaxQueueSize  int64
 }
 
 type Limits struct {
@@ -148,12 +170,12 @@ func (d *Db) UpdateLimit(ctx context.Context, peer route.Vertex,
 
 	peerHex := hex.EncodeToString(peer[:])
 
-	const replace string = `REPLACE INTO limits(peer, htlc_max_pending, htlc_max_hourly_rate, mode) VALUES(?, ?, ?, ?);`
+	const replace string = `REPLACE INTO limits(peer, htlc_max_pending, htlc_max_hourly_rate, mode, max_queue_size) VALUES(?, ?, ?, ?, ?);`
 
 	_, err := d.db.ExecContext(
 		ctx, replace, peerHex,
 		limit.MaxPending, limit.MaxHourlyRate,
-		limit.Mode.String(),
+		limit.Mode.String(), limit.MaxQueueSize,
 	)
 
 	return err
@@ -175,7 +197,7 @@ func (d *Db) ClearLimit(ctx context.Context, peer route.Vertex) error {
 
 func (d *Db) GetLimits(ctx context.Context) (*Limits, error) {
 	const query string = `
-	SELECT peer, htlc_max_pending, htlc_max_hourly_rate, mode from limits;`
+	SELECT peer, htlc_max_pending, htlc_max_hourly_rate, mode, max_queue_size from limits;`
 
 	rows, err := d.db.QueryContext(ctx, query)
 	if err != nil {
@@ -192,7 +214,7 @@ func (d *Db) GetLimits(ctx context.Context) (*Limits, error) {
 			modeStr string
 		)
 		err := rows.Scan(
-			&peerHex, &limit.MaxPending, &limit.MaxHourlyRate, &modeStr,
+			&peerHex, &limit.MaxPending, &limit.MaxHourlyRate, &modeStr, &limit.MaxQueueSize,
 		)
 		if err != nil {
 			return nil, err
@@ -210,6 +232,9 @@ func (d *Db) GetLimits(ctx context.Context) (*Limits, error) {
 
 		case "BLOCK":
 			limit.Mode = ModeBlock
+
+		case "QUEUE_LIMITED":
+			limit.Mode = ModeQueueLimited
 
 		default:
 			return nil, errors.New("unknown mode")

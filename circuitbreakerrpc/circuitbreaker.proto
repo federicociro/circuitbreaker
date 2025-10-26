@@ -63,6 +63,7 @@ enum Mode {
     MODE_QUEUE = 1;
     MODE_QUEUE_PEER_INITIATED = 2;
     MODE_BLOCK = 3;
+    MODE_QUEUE_LIMITED = 4;
 }
 
 message ClearLimitsRequest {
@@ -108,6 +109,7 @@ message Limit {
     int64 max_hourly_rate = 3;
 	int64 max_pending = 5;
     Mode mode = 6;
+    int64 max_queue_size = 7;
 }
 
 message Counter {
